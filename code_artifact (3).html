@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우리 반 스마트 클래스 포털</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Jua & Noto Sans KR -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #fff8f3;
+            background-image: radial-gradient(#ffd6e7 2px, transparent 2px);
+            background-size: 28px 28px;
+            color: #4a3525;
+            user-select: none;
+        }
+        .font-jua {
+            font-family: 'Jua', sans-serif;
+        }
+        .card-bounce {
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+        }
+        .card-bounce:hover {
+            transform: translateY(-6px);
+        }
+        .card-bounce:active {
+            transform: translateY(2px);
+        }
+        /* 편집 모드 흔들림 애니메이션 */
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(-0.8deg); }
+            50% { transform: rotate(0.8deg); }
+        }
+        .edit-wiggle {
+            animation: wiggle 0.35s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <!-- 상단 헤더 & 시계 위젯 -->
+    <header class="bg-white/85 backdrop-blur-md border-b-4 border-pink-200 sticky top-0 z-20 shadow-sm">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <!-- 타이틀 (클릭해서 수정 가능) -->
+            <div class="flex items-center gap-3 text-center sm:text-left">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 text-white flex items-center justify-center text-2xl shadow-md">
+                    🏫
+                </div>
+                <div>
+                    <div class="flex items-center justify-center sm:justify-start gap-2">
+                        <h1 id="portalTitle" class="text-2xl sm:text-3xl font-jua text-pink-600 tracking-wide">우리 반 스마트 클래스</h1>
+                        <button onclick="editPortalHeader()" title="제목 수정" class="text-gray-400 hover:text-pink-500 text-sm p-1 rounded-lg hover:bg-pink-50 transition">
+                            ✏️
+                        </button>
+                    </div>
+                    <p id="portalSubtitle" class="text-sm font-medium text-amber-800/80">원하는 활동 버튼을 눌러 바로 시작해보세요!</p>
+                </div>
+            </div>
+
+            <!-- 실시간 날짜/시계 & 관리 버튼 -->
+            <div class="flex items-center gap-2.5">
+                <div class="bg-amber-50 border-2 border-amber-200 px-3.5 py-1.5 rounded-2xl text-right hidden md:block">
+                    <div id="clockDate" class="text-xs font-bold text-amber-700">2026년 1월 1일</div>
+                    <div id="clockTime" class="text-lg font-jua text-amber-900 leading-tight">오전 09:00:00</div>
+                </div>
+
+                <button id="editModeBtn" onclick="toggleEditMode()" class="px-3.5 py-2.5 rounded-2xl font-jua text-sm sm:text-base bg-amber-400 hover:bg-amber-500 text-amber-950 shadow-sm border-b-4 border-amber-600 active:translate-y-0.5 transition">
+                    ⚙️ 링크 편집
+                </button>
+                <button onclick="openLinkModal()" class="px-3.5 py-2.5 rounded-2xl font-jua text-sm sm:text-base bg-pink-500 hover:bg-pink-600 text-white shadow-sm border-b-4 border-pink-700 active:translate-y-0.5 transition">
+                    ➕ 새 링크 추가
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 런처 카드 그리드 -->
+    <main class="max-w-5xl w-full mx-auto px-4 py-8 flex-grow">
+        <!-- 편집 모드 안내 배너 -->
+        <div id="editBanner" class="hidden mb-6 bg-amber-100 border-2 border-amber-400 text-amber-900 px-4 py-3 rounded-2xl flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-2 font-bold text-sm sm:text-base">
+                <span>🛠️</span>
+                <span>편집 모드입니다. 각 카드의 <b>수정(✏️)</b> 버튼을 눌러 GitHub 주소를 연결하거나 삭제할 수 있어요!</span>
+            </div>
+            <button onclick="toggleEditMode()" class="px-3 py-1 bg-amber-500 text-white font-jua rounded-xl text-sm">완료</button>
+        </div>
+
+        <!-- 바로가기 카드 목록 -->
+        <div id="cardsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- JS로 카드가 동적 생성됩니다 -->
+        </div>
+
+        <!-- 백업 / 초기화 도구 모음 -->
+        <div class="mt-12 pt-6 border-t-2 border-dashed border-pink-200 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500">
+            <div class="flex items-center gap-1.5 font-medium">
+                <span>💡</span>
+                <span>추가한 링크는 현재 브라우저에 자동 저장됩니다.</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="exportLinks()" class="px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-300 rounded-xl font-bold text-gray-600 transition">
+                    📤 설정 백업 복사
+                </button>
+                <button onclick="importLinks()" class="px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-300 rounded-xl font-bold text-gray-600 transition">
+                    📥 설정 불러오기
+                </button>
+                <button onclick="resetDefaultLinks()" class="px-3 py-1.5 bg-white hover:bg-red-50 border border-red-200 rounded-xl font-bold text-red-500 transition">
+                    🔄 기본값 복원
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 하단 푸터 -->
+    <footer class="text-center py-5 text-xs sm:text-sm font-bold text-amber-800/60">
+        Smart Class Portal &copy; 2026 | 나만의 학급 도구 모음
+    </footer>
+
+    <!-- 링크 추가 / 수정 모달 -->
+    <div id="linkModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 border-4 border-pink-200 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="modalTitle" class="text-2xl font-jua text-pink-600">➕ 새 바로가기 추가</h2>
+                <button onclick="closeLinkModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">✖</button>
+            </div>
+
+            <form id="linkForm" onsubmit="saveLink(event)" class="space-y-4">
+                <input type="hidden" id="editIndex" value="-1">
+
+                <div>
+                    <label class="block font-jua text-base mb-1">1. 버튼 이름 (제목)</label>
+                    <input type="text" id="inputTitle" required placeholder="예: 3D 자리배치 뽑기"
+                        class="w-full px-3.5 py-2 border-2 border-pink-200 rounded-xl focus:outline-none focus:border-pink-400 font-bold">
+                </div>
+
+                <div>
+                    <label class="block font-jua text-base mb-1">2. 연결할 사이트 주소 (URL)</label>
+                    <input type="url" id="inputUrl" required placeholder="https://science335-bit.github.io/..."
+                        class="w-full px-3.5 py-2 border-2 border-pink-200 rounded-xl focus:outline-none focus:border-pink-400 text-sm">
+                    <p class="text-xs text-gray-500 mt-1">※ 반드시 <b>https://</b> 로 시작하는 전체 주소를 넣어주세요.</p>
+                </div>
+
+                <div>
+                    <label class="block font-jua text-base mb-1">3. 간단한 설명</label>
+                    <input type="text" id="inputDesc" placeholder="예: 6가지 3D 테마 교실에서 자리 뽑기"
+                        class="w-full px-3.5 py-2 border-2 border-pink-200 rounded-xl focus:outline-none focus:border-pink-400 text-sm">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-jua text-base mb-1">4. 아이콘 이모지</label>
+                        <input type="text" id="inputIcon" value="🎲" maxlength="4"
+                            class="w-full px-3.5 py-2 border-2 border-pink-200 rounded-xl text-center text-2xl focus:outline-none focus:border-pink-400">
+                    </div>
+                    <div>
+                        <label class="block font-jua text-base mb-1">5. 카드 색상 테마</label>
+                        <select id="inputColor" class="w-full px-3 py-2.5 border-2 border-pink-200 rounded-xl font-bold focus:outline-none focus:border-pink-400">
+                            <option value="pink">🌸 핑크 (사랑스러움)</option>
+                            <option value="blue">🐳 블루 (시원함)</option>
+                            <option value="amber">🐥 옐로우 (활기참)</option>
+                            <option value="emerald">🌿 민트/그린 (상쾌함)</option>
+                            <option value="purple">🔮 퍼플 (신비로움)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 pt-1">
+                    <input type="checkbox" id="inputNewTab" checked class="w-4 h-4 accent-pink-500 rounded">
+                    <label for="inputNewTab" class="text-sm font-bold text-gray-700">새 탭에서 열기 (포털 화면 유지)</label>
+                </div>
+
+                <div class="flex gap-2 pt-3">
+                    <button type="button" onclick="closeLinkModal()" class="flex-1 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-jua rounded-xl">
+                        취소
+                    </button>
+                    <button type="submit" class="flex-1 py-2.5 bg-pink-500 hover:bg-pink-600 text-white font-jua rounded-xl shadow border-b-4 border-pink-700">
+                        저장하기
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 커스텀 알림 토스트 -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white px-5 py-2.5 rounded-full font-jua text-base shadow-xl opacity-0 pointer-events-none transition-opacity duration-300 z-50">
+        알림 메시지
+    </div>
+
+    <script>
+        // 기본 제공 카드 목록 (사용자님의 GitHub 주소 구조 반영)
+        const DEFAULT_LINKS = [
+            {
+                title: "동글동글 3D 자리배치",
+                url: "https://science335-bit.github.io/seat/",
+                desc: "교실, 과학실, 카페, 한옥 등 6가지 3D 공간에서 달려가 자리 앉기!",
+                icon: "🪑",
+                color: "pink",
+                newTab: true
+            },
+            {
+                title: "3D 체육대회 계주 순위뽑기",
+                url: "https://science335-bit.github.io/Draw-order/",
+                desc: "귀여운 3D 캐릭터들의 손에 땀을 쥐는 달리기 순위 추첨!",
+                icon: "🏃‍♂️",
+                color: "blue",
+                newTab: true
+            },
+            {
+                title: "발표자 / 모둠 랜덤 뽑기",
+                url: "https://science335-bit.github.io/",
+                desc: "새 링크를 추가하거나 편집 버튼으로 주소를 연결해 보세요.",
+                icon: "🎲",
+                color: "amber",
+                newTab: true
+            }
+        ];
+
+        const COLOR_STYLES = {
+            pink: {
+                bg: "from-pink-400 to-rose-500",
+                border: "border-pink-200",
+                badge: "bg-pink-100 text-pink-700",
+                shadow: "shadow-pink-200/60"
+            },
+            blue: {
+                bg: "from-sky-400 to-blue-600",
+                border: "border-sky-200",
+                badge: "bg-sky-100 text-sky-700",
+                shadow: "shadow-sky-200/60"
+            },
+            amber: {
+                bg: "from-amber-400 to-orange-500",
+                border: "border-amber-200",
+                badge: "bg-amber-100 text-amber-800",
+                shadow: "shadow-amber-200/60"
+            },
+            emerald: {
+                bg: "from-teal-400 to-emerald-600",
+                border: "border-emerald-200",
+                badge: "bg-emerald-100 text-emerald-800",
+                shadow: "shadow-emerald-200/60"
+            },
+            purple: {
+                bg: "from-violet-400 to-purple-600",
+                border: "border-purple-200",
+                badge: "bg-purple-100 text-purple-800",
+                shadow: "shadow-purple-200/60"
+            }
+        };
+
+        let links = [];
+        let isEditMode = false;
+
+        // 초기 데이터 로드
+        function loadState() {
+            const savedLinks = localStorage.getItem("smart_portal_links_v1");
+            if (savedLinks) {
+                try {
+                    links = JSON.parse(savedLinks);
+                } catch (e) {
+                    links = [...DEFAULT_LINKS];
+                }
+            } else {
+                links = [...DEFAULT_LINKS];
+            }
+
+            const savedTitle = localStorage.getItem("smart_portal_title");
+            const savedSub = localStorage.getItem("smart_portal_sub");
+            if (savedTitle) document.getElementById("portalTitle").innerText = savedTitle;
+            if (savedSub) document.getElementById("portalSubtitle").innerText = savedSub;
+        }
+
+        function saveState() {
+            localStorage.setItem("smart_portal_links_v1", JSON.stringify(links));
+        }
+
+        // 카드 렌더링
+        function renderCards() {
+            const grid = document.getElementById("cardsGrid");
+            grid.innerHTML = "";
+
+            links.forEach((item, idx) => {
+                const st = COLOR_STYLES[item.color] || COLOR_STYLES.pink;
+                const card = document.createElement("div");
+                card.className = `relative bg-white rounded-3xl border-4 ${st.border} shadow-xl ${st.shadow} overflow-hidden flex flex-col justify-between ${isEditMode ? 'edit-wiggle' : 'card-bounce cursor-pointer'}`;
+
+                // 일반 모드일 때 카드 클릭 시 링크 이동
+                if (!isEditMode) {
+                    card.onclick = () => {
+                        if (!item.url || item.url === "#") {
+                            showToast("⚠️ 연결된 주소가 없습니다. 우측 상단 [링크 편집]에서 주소를 넣어주세요!");
+                            return;
+                        }
+                        if (item.newTab) {
+                            window.open(item.url, "_blank", "noopener,noreferrer");
+                        } else {
+                            window.location.href = item.url;
+                        }
+                    };
+                }
+
+                card.innerHTML = `
+                    <div>
+                        <!-- 상단 컬러 배너 & 아이콘 -->
+                        <div class="bg-gradient-to-r ${st.bg} p-5 flex items-center justify-between text-white">
+                            <span class="text-5xl drop-shadow">${item.icon || "🔗"}</span>
+                            <span class="text-xs font-bold bg-white/25 backdrop-blur-sm px-2.5 py-1 rounded-full">
+                                ${item.newTab ? "새 창 열기 ↗" : "바로 이동 →"}
+                            </span>
+                        </div>
+
+                        <!-- 본문 제목 & 설명 -->
+                        <div class="p-5">
+                            <h3 class="text-2xl font-jua text-gray-800 mb-1.5">${escapeHtml(item.title)}</h3>
+                            <p class="text-sm text-gray-600 font-medium leading-relaxed min-h-[40px]">
+                                ${escapeHtml(item.desc || "클릭하면 해당 페이지로 이동합니다.")}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 하단 URL 표시 또는 편집 버튼 -->
+                    <div class="px-5 pb-4 pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
+                        <span class="text-xs font-bold text-gray-400 truncate max-w-[190px]" title="${escapeHtml(item.url)}">
+                            ${escapeHtml(item.url)}
+                        </span>
+                        ${isEditMode ? `
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button onclick="moveLink(${idx}, -1)" title="앞으로 이동" class="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-bold">◀</button>
+                                <button onclick="moveLink(${idx}, 1)" title="뒤로 이동" class="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-bold">▶</button>
+                                <button onclick="openLinkModal(${idx})" class="px-2.5 py-1 bg-amber-400 hover:bg-amber-500 text-amber-950 font-jua rounded-lg text-xs">✏️ 수정</button>
+                                <button onclick="deleteLink(${idx})" class="px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white font-jua rounded-lg text-xs">🗑️</button>
+                            </div>
+                        ` : `
+                            <span class="px-3 py-1 rounded-full text-xs font-jua ${st.badge}">시작하기 ▶</span>
+                        `}
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
+        }
+
+        // 편집 모드 토글
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const btn = document.getElementById("editModeBtn");
+            const banner = document.getElementById("editBanner");
+            if (isEditMode) {
+                btn.innerText = "✅ 편집 완료";
+                btn.classList.replace("bg-amber-400", "bg-emerald-500");
+                btn.classList.replace("text-amber-950", "text-white");
+                btn.classList.replace("border-amber-600", "border-emerald-700");
+                banner.classList.remove("hidden");
+            } else {
+                btn.innerText = "⚙️ 링크 편집";
+                btn.classList.replace("bg-emerald-500", "bg-amber-400");
+                btn.classList.replace("text-white", "text-amber-950");
+                btn.classList.replace("border-emerald-700", "border-amber-600");
+                banner.classList.add("hidden");
+            }
+            renderCards();
+        }
+
+        // 링크 추가/수정 모달 제어
+        function openLinkModal(idx = -1) {
+            const modal = document.getElementById("linkModal");
+            document.getElementById("editIndex").value = idx;
+
+            if (idx >= 0 && links[idx]) {
+                const item = links[idx];
+                document.getElementById("modalTitle").innerText = "✏️ 바로가기 링크 수정";
+                document.getElementById("inputTitle").value = item.title;
+                document.getElementById("inputUrl").value = item.url;
+                document.getElementById("inputDesc").value = item.desc || "";
+                document.getElementById("inputIcon").value = item.icon || "🔗";
+                document.getElementById("inputColor").value = item.color || "pink";
+                document.getElementById("inputNewTab").checked = item.newTab !== false;
+            } else {
+                document.getElementById("modalTitle").innerText = "➕ 새 바로가기 추가";
+                document.getElementById("linkForm").reset();
+                document.getElementById("inputIcon").value = "🎲";
+                document.getElementById("inputNewTab").checked = true;
+            }
+
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+
+        function closeLinkModal() {
+            const modal = document.getElementById("linkModal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        function saveLink(e) {
+            e.preventDefault();
+            const idx = parseInt(document.getElementById("editIndex").value, 10);
+            const newItem = {
+                title: document.getElementById("inputTitle").value.trim(),
+                url: document.getElementById("inputUrl").value.trim(),
+                desc: document.getElementById("inputDesc").value.trim(),
+                icon: document.getElementById("inputIcon").value.trim() || "🔗",
+                color: document.getElementById("inputColor").value,
+                newTab: document.getElementById("inputNewTab").checked
+            };
+
+            if (idx >= 0) {
+                links[idx] = newItem;
+                showToast("✅ 링크 정보가 수정되었습니다!");
+            } else {
+                links.push(newItem);
+                showToast("🎉 새 바로가기 버튼이 추가되었습니다!");
+            }
+
+            saveState();
+            renderCards();
+            closeLinkModal();
+        }
+
+        function deleteLink(idx) {
+            links.splice(idx, 1);
+            saveState();
+            renderCards();
+            showToast("🗑️ 버튼이 삭제되었습니다.");
+        }
+
+        function moveLink(idx, dir) {
+            const target = idx + dir;
+            if (target < 0 || target >= links.length) return;
+            [links[idx], links[target]] = [links[target], links[idx]];
+            saveState();
+            renderCards();
+        }
+
+        // 상단 포털 제목 수정
+        function editPortalHeader() {
+            const curTitle = document.getElementById("portalTitle").innerText;
+            const curSub = document.getElementById("portalSubtitle").innerText;
+            const nextTitle = prompt("포털 메인 제목을 입력하세요:", curTitle);
+            if (nextTitle !== null && nextTitle.trim()) {
+                document.getElementById("portalTitle").innerText = nextTitle.trim();
+                localStorage.setItem("smart_portal_title", nextTitle.trim());
+            }
+            const nextSub = prompt("부제목을 입력하세요:", curSub);
+            if (nextSub !== null && nextSub.trim()) {
+                document.getElementById("portalSubtitle").innerText = nextSub.trim();
+                localStorage.setItem("smart_portal_sub", nextSub.trim());
+            }
+        }
+
+        // 백업 / 복원
+        function exportLinks() {
+            const data = JSON.stringify(links);
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(data).then(() => showToast("📋 설정 코드가 클립보드에 복사되었습니다!"));
+            } else {
+                prompt("아래 코드를 복사해 보관하세요:", data);
+            }
+        }
+
+        function importLinks() {
+            const raw = prompt("백업해 둔 설정 코드를 붙여넣으세요:");
+            if (!raw) return;
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    links = parsed;
+                    saveState();
+                    renderCards();
+                    showToast("✅ 설정을 성공적으로 불러왔습니다!");
+                }
+            } catch (e) {
+                showToast("⚠️ 올바르지 않은 설정 코드입니다.");
+            }
+        }
+
+        function resetDefaultLinks() {
+            links = [...DEFAULT_LINKS];
+            saveState();
+            renderCards();
+            showToast("🔄 기본 버튼 목록으로 복원되었습니다.");
+        }
+
+        // 실시간 시계 업데이트
+        function updateClock() {
+            const now = new Date();
+            const days = ["일", "월", "화", "수", "목", "금", "토"];
+            document.getElementById("clockDate").innerText =
+                `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일 (${days[now.getDay()]})`;
+            document.getElementById("clockTime").innerText = now.toLocaleTimeString("ko-KR");
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById("toast");
+            t.innerText = msg;
+            t.classList.remove("opacity-0");
+            setTimeout(() => t.classList.add("opacity-0"), 2600);
+        }
+
+        window.onload = () => {
+            loadState();
+            renderCards();
+            updateClock();
+            setInterval(updateClock, 1000);
+        };
+    </script>
+</body>
+</html>
